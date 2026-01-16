@@ -1,6 +1,6 @@
 # tpc-ds-export-to-bq
 
-Generate **TPC-DS** data into a **DuckDB** file, export **one Parquet per table**, then create a **BigQuery** dataset and load each table from Parquet.
+Generate [**TPC-DS**](https://www.tpc.org/TPC_Documents_Current_Versions/pdf/TPC-DS_v4.0.0.pdf) data into a **DuckDB** file, export **one Parquet per table**, then create a **BigQuery** dataset and load each table from Parquet.
 
 ## Quick start
 
