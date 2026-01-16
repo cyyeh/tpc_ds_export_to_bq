@@ -4,30 +4,21 @@ Generate **TPC-DS** data into a **DuckDB** file, export **one Parquet per table*
 
 ## Quick start
 
-### 1) Install deps (Poetry)
+### 1. Install deps (Poetry)
 
 ```bash
 poetry install
 ```
 
-### 2) Configure env (recommended)
+### 2. Configure env (recommended)
 
-Copy `env.example` to `.env` and fill in values:
-
-```bash
-cp env.example .env
-```
-
-### 3) Run
-
-For large SF10 data, **use GCS staging** (recommended):
+Copy `.env.example` to `.env` and fill in values:
 
 ```bash
-poetry run python scripts/load_tpcds_sf10.py \
-  --project-id YOUR_GCP_PROJECT \
-  --gcs-bucket YOUR_GCS_BUCKET \
-  --gcs-prefix tpsds_sf10
+cp .env.example .env
 ```
+
+### 3. Run
 
 This will:
 
@@ -39,5 +30,3 @@ This will:
 ## Notes
 
 - DuckDB generates TPC-DS via `INSTALL tpcds; LOAD tpcds; CALL dsdgen(sf = 10);`
-- If you omit `--gcs-bucket`, the script will try to stream each local Parquet to BigQuery, which is often impractical for SF10.
-
