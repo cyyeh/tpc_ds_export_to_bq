@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import asyncio
 from pathlib import Path
 
 import duckdb
@@ -86,27 +87,40 @@ def upload_and_load_parquet_to_bq(
     parquet_dir: Path,
     table_names: list[str],
     write_disposition: str,
+    concurrency: int,
 ) -> None:
     print(f"Uploading and loading Parquet to BigQuery at {project_id}.{dataset_id}")
-    from google.cloud import bigquery
 
-    client = bigquery.Client(project=project_id, location=location)
-    job_config = bigquery.LoadJobConfig(
-        source_format=bigquery.SourceFormat.PARQUET,
-        write_disposition=write_disposition,
-        autodetect=True,
-    )
+    def _load_one_table_blocking(table_name: str) -> None:
+        from google.cloud import bigquery
 
-    for t in table_names:
-        print(f"Uploading and loading table {t} to BigQuery at {project_id}.{dataset_id}")
-        local_path = parquet_dir / f"{t}.parquet"
+        local_path = parquet_dir / f"{table_name}.parquet"
         if not local_path.exists():
-            continue
+            return
 
-        table_id = f"{project_id}.{dataset_id}.{t}"
+        table_id = f"{project_id}.{dataset_id}.{table_name}"
+        print(f"Uploading and loading table {table_name} to BigQuery at {table_id}")
+
+        client = bigquery.Client(project=project_id, location=location)
+        job_config = bigquery.LoadJobConfig(
+            source_format=bigquery.SourceFormat.PARQUET,
+            write_disposition=write_disposition,
+            autodetect=True,
+        )
         with local_path.open("rb") as f:
             job = client.load_table_from_file(f, table_id, job_config=job_config)
         job.result()
+
+    async def _run_concurrently() -> None:
+        sem = asyncio.Semaphore(max(1, int(concurrency)))
+
+        async def _task(table_name: str) -> None:
+            async with sem:
+                await asyncio.to_thread(_load_one_table_blocking, table_name)
+
+        await asyncio.gather(*(_task(t) for t in table_names))
+
+    asyncio.run(_run_concurrently())
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -133,6 +147,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--dataset-id", default=_env_default("BQ_DATASET_ID", "tpsds_sf10"))
     p.add_argument("--location", default=_env_default("BQ_LOCATION", "US"))
     p.add_argument("--write-disposition", default=_env_default("BQ_WRITE_DISPOSITION", "WRITE_TRUNCATE"))
+    p.add_argument(
+        "--bq-concurrency",
+        type=int,
+        default=int(_env_default("BQ_CONCURRENCY", "4") or "4"),
+        help="Max number of tables to load into BigQuery concurrently.",
+    )
     p.add_argument(
         "--gcp-credentials",
         type=Path,
@@ -166,6 +186,7 @@ def main(argv: list[str]) -> int:
         parquet_dir=args.parquet_dir,
         table_names=table_names,
         write_disposition=args.write_disposition,
+        concurrency=args.bq_concurrency,
     )
 
     return 0
