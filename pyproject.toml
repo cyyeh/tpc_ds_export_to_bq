@@ -1,0 +1,20 @@
+[project]
+name = "tpc-ds-export-to-bq"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "ChihYu Yeh",email = "chihyu.jimmy.yeh@gmail.com"}
+]
+readme = "README.md"
+package-mode = false
+requires-python = ">=3.12"
+dependencies = [
+    "duckdb (>=1.4.3,<2.0.0)",
+    "google-cloud-bigquery (>=3.38.0,<4.0.0)",
+    "python-dotenv (>=1.2.1,<2.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
